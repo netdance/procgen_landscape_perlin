@@ -56,8 +56,8 @@ def generate_radial_gradient(width, height):
             logger.debug("x %s y %s gradient %s", x, y, gradient[x][y])
     # Invert the gradient
     gradient = 1 - gradient
-    # Apply a power function to make the falloff steeper
-    gradient = gradient**3
+    # Apply a tanh function to make the falloff steeper
+    gradient = np.tanh(gradient * .00001)  # Adjust the multiplier to control steepness
     return gradient
 
 def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed):
@@ -90,7 +90,7 @@ def create_map(width, height):
     # Parameters for Perlin noise
     scale = 200.0         # Larger scale for more contiguous areas
     octaves = 4          # Fewer octaves for less detail
-    persistence = 0.75     # Adjust persistence
+    persistence = 0.5     # Adjust persistence
     lacunarity = 1.9      # Adjust lacunarity
     seed = np.random.randint(0, 100)
 
@@ -109,7 +109,7 @@ def create_map(width, height):
     combined_map = noise_map * combined_gradient
 
     # Create terrain map
-    threshold = 0.15  # Adjust this value to control the land-water ratio
+    threshold = 0.2  # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):

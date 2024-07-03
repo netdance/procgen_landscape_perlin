@@ -56,8 +56,8 @@ def generate_radial_gradient(width, height):
             gradient[x][y] = distance / max_distance  
     # Invert the gradient
     gradient = 1 - gradient
-    # Apply a power function to make the falloff steeper
-    gradient = gradient**2
+    # Apply a tanh function to make the falloff steeper
+    gradient = np.tanh(gradient * .00001)  # Adjust the multiplier to control steepness
     return gradient
 
 def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed):
@@ -72,28 +72,9 @@ def shade_color(color: Tuple[int, int, int], min: float, max: float, value: floa
         return color
     if value < 0:
         return (0,0,0)
-    '''
-    if min == 0:
-        if max / 10 > value:
-            return (0,0,0)
-        else:
-            # Calculate the float multiplier
-            multiplier = float(1 - (((max - value) / max) * .8))
-            #logger.debug("value %s max %s", value, max)
-            #logger.debug("multiplier %s", multiplier)
-            # Multiply each element of the tuple by the float
-            bright = tuple(int(element * multiplier) for element in color)
-            #logger.debug(f"bright {bright}")
-            return bright
-    '''
     multiplier = float(1 - (((max - value) / max) * .75))
     bright = tuple(int(element * multiplier) for element in color)
     return bright
-
-    percent = (value - min) / max
-    #logger.debug("value - min / max %s %s %s", value, min, max)
-    #logger.debug("percent: %s", percent)
-    return color
 
 def get_color(value, threshold=0.15):
     # Define colors
@@ -125,7 +106,7 @@ def create_map(width, height):
     # Parameters for Perlin noise
     scale = 150.0         # Larger scale for more contiguous areas
     octaves = 4          # Fewer octaves for less detail
-    persistence = 0.75     # Adjust persistence
+    persistence = 0.5     # Adjust persistence
     lacunarity = 1.9      # Adjust lacunarity
     seed = np.random.randint(0, 100)
 
@@ -144,7 +125,7 @@ def create_map(width, height):
     combined_map = noise_map * combined_gradient
 
     # Create terrain map
-    threshold = 0.15 # Adjust this value to control the land-water ratio
+    threshold = 0.25 # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):
