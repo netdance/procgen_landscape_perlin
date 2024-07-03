@@ -41,7 +41,8 @@ def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity
                 repeaty=1024,
                 base=seed
             )
-            noise_map[x][y] = noise_value  # Note (x, y) indexing
+            # Normalize noise_value from [-1, 1] to [0, 1]
+            noise_map[x][y] = (noise_value + 1) / 2  # Note (x, y) indexing
     return noise_map
 
 def generate_radial_gradient(width, height):
@@ -53,6 +54,8 @@ def generate_radial_gradient(width, height):
             distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
             gradient[x][y] = distance / max_distance  # Note (x, y) indexing
             logger.debug("x %s y %s gradient %s", x, y, gradient[x][y])
+    # Invert the gradient
+    gradient = 1 - gradient
     return gradient
 
 def get_color(value, threshold=0.15):
@@ -76,7 +79,7 @@ def get_color(value, threshold=0.15):
 
 def create_map(width, height):
     # Parameters for Perlin noise
-    scale = 200.0         # Larger scale for more contiguous areas
+    scale = 120.0         # Larger scale for more contiguous areas
     octaves = 4          # Fewer octaves for less detail
     persistence = 0.75     # Adjust persistence
     lacunarity = 1.9      # Adjust lacunarity
@@ -88,11 +91,11 @@ def create_map(width, height):
     # Generate radial gradient
     gradient = generate_radial_gradient(width, height)
 
-    # Subtract the gradient from the noise map to lower the edges
-    combined_map = noise_map - gradient
+    # Multiply the noise map by the combined gradient
+    combined_map = noise_map * gradient
 
     # Create terrain map
-    threshold = -0.20  # Adjust this value to control the land-water ratio
+    threshold = 0.3  # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):

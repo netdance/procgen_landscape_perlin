@@ -2,7 +2,6 @@ import cProfile
 import logging
 import pstats
 import sys
-from typing import Tuple
 
 import noise
 import numpy as np
@@ -10,7 +9,7 @@ import pygame
 
 # Basic configuration for logging
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Creating a logger
@@ -29,7 +28,7 @@ def init():
     return window
 
 def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed):
-    noise_map = np.zeros((width, height))  
+    noise_map = np.zeros((width, height))  # Note (width, height)
     for x in range(width):
         for y in range(height):
             noise_value = noise.pnoise2(
@@ -49,15 +48,16 @@ def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity
 def generate_radial_gradient(width, height):
     center_x, center_y = width // 2, height // 2
     max_distance = np.sqrt(center_x**2 + center_y**2)
-    gradient = np.zeros((width, height))  
+    gradient = np.zeros((width, height))  # Note (width, height)
     for x in range(width):
         for y in range(height):
             distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-            gradient[x][y] = distance / max_distance  
+            gradient[x][y] = distance / max_distance  # Note (x, y) indexing
+            logger.debug("x %s y %s gradient %s", x, y, gradient[x][y])
     # Invert the gradient
     gradient = 1 - gradient
     # Apply a power function to make the falloff steeper
-    gradient = gradient**2
+    gradient = gradient**3
     return gradient
 
 def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed):
@@ -67,34 +67,6 @@ def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed)
     combined_gradient = (combined_gradient - combined_gradient.min()) / (combined_gradient.max() - combined_gradient.min())
     return combined_gradient
 
-def shade_color(color: Tuple[int, int, int], min: float, max: float, value: float) -> Tuple[int, int, int]:
-    if max == 0:
-        return color
-    if value < 0:
-        return (0,0,0)
-    '''
-    if min == 0:
-        if max / 10 > value:
-            return (0,0,0)
-        else:
-            # Calculate the float multiplier
-            multiplier = float(1 - (((max - value) / max) * .8))
-            #logger.debug("value %s max %s", value, max)
-            #logger.debug("multiplier %s", multiplier)
-            # Multiply each element of the tuple by the float
-            bright = tuple(int(element * multiplier) for element in color)
-            #logger.debug(f"bright {bright}")
-            return bright
-    '''
-    multiplier = float(1 - (((max - value) / max) * .75))
-    bright = tuple(int(element * multiplier) for element in color)
-    return bright
-
-    percent = (value - min) / max
-    #logger.debug("value - min / max %s %s %s", value, min, max)
-    #logger.debug("percent: %s", percent)
-    return color
-
 def get_color(value, threshold=0.15):
     # Define colors
     BLACK = (0, 0, 0)
@@ -103,27 +75,20 @@ def get_color(value, threshold=0.15):
     BROWN = (139,69,19)
     BLUE = (0, 0, 255)
     WHITE = (255, 255, 255)
-    bottom = 0
-    sea = threshold 
-    beach = threshold + 0.05
-    grass = threshold + 0.18
-    hills = threshold + 0.28
-    snow = 1
-
-    if value < sea:
-        return shade_color(BLUE, bottom, sea, value)  # Deep Water
-    elif value < beach:
-        return shade_color(SAND, sea, beach, value)  # Beach
-    elif value < grass:
-        return shade_color(GREEN, beach, grass, value)  # Grass
-    elif value < hills:
-        return shade_color(BROWN, grass, hills, value) # Hills
+    if value < threshold - 0.05:
+        return BLUE  # Deep Water
+    elif value < threshold:
+        return SAND  # Beach
+    elif value < threshold + 0.22:
+        return GREEN  # Grass
+    elif value < threshold + 0.30:
+        return BROWN # Hills
     else:
-        return shade_color(WHITE, hills, snow, value)  # Snow caps
+        return WHITE  # Snow caps
 
 def create_map(width, height):
     # Parameters for Perlin noise
-    scale = 150.0         # Larger scale for more contiguous areas
+    scale = 200.0         # Larger scale for more contiguous areas
     octaves = 4          # Fewer octaves for less detail
     persistence = 0.75     # Adjust persistence
     lacunarity = 1.9      # Adjust lacunarity
@@ -144,7 +109,7 @@ def create_map(width, height):
     combined_map = noise_map * combined_gradient
 
     # Create terrain map
-    threshold = 0.15 # Adjust this value to control the land-water ratio
+    threshold = 0.15  # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):
