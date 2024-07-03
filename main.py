@@ -28,9 +28,9 @@ def init():
     return window
 
 def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed):
-    noise_map = np.zeros((height, width))  # Note (height, width)
-    for y in range(height):
-        for x in range(width):
+    noise_map = np.zeros((width, height))  # Note (width, height)
+    for x in range(width):
+        for y in range(height):
             noise_value = noise.pnoise2(
                 x / scale,
                 y / scale,
@@ -41,35 +41,38 @@ def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity
                 repeaty=1024,
                 base=seed
             )
-            noise_map[y][x] = noise_value  # Note (y, x) indexing
+            noise_map[x][y] = noise_value  # Note (x, y) indexing
     return noise_map
 
 def generate_radial_gradient(width, height):
     center_x, center_y = width // 2, height // 2
     max_distance = np.sqrt(center_x**2 + center_y**2)
-    gradient = np.zeros((height, width))  # Note (height, width)
-    for y in range(height):
-        for x in range(width):
+    gradient = np.zeros((width, height))  # Note (width, height)
+    for x in range(width):
+        for y in range(height):
             distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-            gradient[y][x] = distance / max_distance  # Note (y, x) indexing
-            logger.debug("x %s y %s gradient %s", x, y, gradient[y][x])
+            gradient[x][y] = distance / max_distance  # Note (x, y) indexing
+            logger.debug("x %s y %s gradient %s", x, y, gradient[x][y])
     return gradient
 
 def get_color(value, threshold=0.15):
     # Define colors
     BLACK = (0, 0, 0)
     GREEN = (34, 139, 34)
-    BROWN = (119, 69, 19)
+    SAND = (231,196,150)
+    BROWN = (139,69,19)
     BLUE = (0, 0, 255)
     WHITE = (255, 255, 255)
-    if value < threshold - 0.15:
+    if value < threshold - 0.05:
         return BLUE  # Deep Water
     elif value < threshold:
-        return BROWN  # Beach
-    elif value < threshold + 0.25:
+        return SAND  # Beach
+    elif value < threshold + 0.22:
         return GREEN  # Grass
+    elif value < threshold + 0.30:
+        return BROWN # Hills
     else:
-        return WHITE  # Snow
+        return WHITE  # Snow caps
 
 def create_map(width, height):
     # Parameters for Perlin noise
@@ -89,15 +92,15 @@ def create_map(width, height):
     combined_map = noise_map - gradient
 
     # Create terrain map
-    threshold = -0.25  # Adjust this value to control the land-water ratio
-    terrain_map = np.zeros((height, width, 3), dtype=np.uint8)  
-    for y in range(height):
-        for x in range(width):
-            color = get_color(combined_map[y][x], threshold)  
-            terrain_map[y][x] = color  
+    threshold = -0.20  # Adjust this value to control the land-water ratio
+    terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
+    for x in range(width):
+        for y in range(height):
+            color = get_color(combined_map[x][y], threshold)  
+            terrain_map[x][y] = color  
 
     # Convert terrain map to Pygame surface
-    surface = pygame.surfarray.make_surface(terrain_map.transpose((1, 0, 2)))
+    surface = pygame.surfarray.make_surface(terrain_map)
     return surface
 
 def main():
