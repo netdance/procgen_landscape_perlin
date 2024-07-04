@@ -27,11 +27,11 @@ def init():
     pygame.display.set_caption("2D Perlin Noise Terrain")
     return window
 
-def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed):
+def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed):
     noise_map = np.zeros((width, height)) 
     for x in range(width):
         for y in range(height):
-            noise_value = noise.pnoise2(
+            noise_value = noise.snoise2(
                 x / scale,
                 y / scale,
                 octaves=octaves,
@@ -83,7 +83,7 @@ def create_map(width, height):
     seed = np.random.randint(0, 100)
 
     # Generate noise map
-    noise_map = generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed)
+    noise_map = generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
 
     # Create terrain map
     threshold = 0.0  # Adjust this value to control the land-water ratio

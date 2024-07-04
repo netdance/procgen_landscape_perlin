@@ -27,11 +27,11 @@ def init():
     pygame.display.set_caption("2D Perlin Noise Terrain")
     return window
 
-def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed):
+def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed):
     noise_map = np.zeros((width, height))  # Note (width, height)
     for x in range(width):
         for y in range(height):
-            noise_value = noise.pnoise2(
+            noise_value = noise.snoise2(
                 x / scale,
                 y / scale,
                 octaves=octaves,
@@ -57,11 +57,11 @@ def generate_radial_gradient(width, height):
     # Invert the gradient
     gradient = 1 - gradient
     # Apply a tanh function to make the falloff steeper
-    gradient = np.tanh(gradient * .00001)  # Adjust the multiplier to control steepness
+    #gradient = np.tanh(gradient * .00001)  # Adjust the multiplier to control steepness
     return gradient
 
 def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed):
-    noise_map = generate_perlin_noise(width, height, noise_scale, 4, 0.5, 2.0, noise_seed)
+    noise_map = generate_noise(width, height, noise_scale, 4, 0.5, 2.0, noise_seed)
     combined_gradient = gradient * noise_map
     # Normalize the combined gradient
     combined_gradient = (combined_gradient - combined_gradient.min()) / (combined_gradient.max() - combined_gradient.min())
@@ -95,18 +95,18 @@ def create_map(width, height):
     seed = np.random.randint(0, 100)
 
     # Generate noise map
-    noise_map = generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed)
+    noise_map = generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
 
     # Generate radial gradient
     gradient = generate_radial_gradient(width, height)
 
     # Generate combined gradient
-    noise_scale = 50.0
-    noise_seed = np.random.randint(0, 100)
-    combined_gradient = generate_combined_gradient(width, height, gradient, noise_scale, noise_seed)
+    #noise_scale = 50.0
+    #noise_seed = np.random.randint(0, 100)
+    #combined_gradient = generate_combined_gradient(width, height, gradient, noise_scale, noise_seed)
 
     # Multiply the noise map by the combined gradient
-    combined_map = noise_map * combined_gradient
+    combined_map = noise_map * gradient
 
     # Create terrain map
     threshold = 0.2  # Adjust this value to control the land-water ratio
