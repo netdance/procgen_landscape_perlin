@@ -3,6 +3,7 @@ import logging
 import pstats
 import sys
 from typing import Tuple
+import random
 
 import noise
 import numpy as np
@@ -43,7 +44,7 @@ def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
                 base=seed
             )
             # Normalize noise_value from [-1, 1] to [0, 1]
-            noise_map[x][y] = (noise_value + 1) / 2  # Note (x, y) indexing
+            noise_map[x][y] = (noise_value + 1) / 2  
     return noise_map
 
 def generate_radial_gradient(width, height):
@@ -118,6 +119,44 @@ def get_color(value, threshold=0.15):
     else:
         return shade_color(WHITE, hills, snow, value)  # Snow caps
 
+def find_next_cell(alt_map, x, y):
+    min_alt = alt_map[x, y]
+    next_cell = (x, y)
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+        nx, ny = x + dx, y + dy
+        if 0 <= nx < alt_map.shape[0] and 0 <= ny < alt_map.shape[1] and alt_map[nx, ny] < min_alt:
+            min_alt = alt_map[nx, ny]
+            next_cell = (nx, ny)
+    return next_cell
+
+def create_river(alt_map, start_x, start_y):
+    river_map = np.zeros_like(alt_map, dtype=bool)
+    x, y = start_x, start_y
+    while True:
+        river_map[x, y] = True
+        next_x, next_y = find_next_cell(alt_map, x, y)
+        if (next_x, next_y) == (x, y):
+            break;
+        x, y = next_x, next_y
+    return river_map
+
+def add_rivers(alt_map, num_rivers=5):
+    river_map = np.zeros_like(alt_map, dtype=bool)
+    max_altitude = alt_map.max()
+    threshold = max_altitude * 0.90
+    coordinates = np.where(alt_map >= threshold)
+    # Combine the row and column indices into a list of tuples
+    coordinates_list = list(zip(coordinates[0], coordinates[1]))
+    if len(coordinates_list) < num_rivers:
+        num_rivers = len(coordinates_list)
+
+    for _ in range(num_rivers):
+        start_x, start_y = random.choice(coordinates_list)
+        coordinates_list.remove((start_x, start_y))
+        single_river_map = create_river(alt_map, start_x, start_y)
+        river_map = np.logical_or(river_map, single_river_map)
+    return river_map
+
 def create_map(width, height):
     # Parameters for Perlin noise
     scale = 200.0         # Larger scale for more contiguous areas
@@ -140,12 +179,18 @@ def create_map(width, height):
     # Multiply the noise map by the combined gradient
     combined_map = noise_map * combined_gradient
 
+    # Add rivers to the map
+    river_map = add_rivers(combined_map)
+
     # Create terrain map
     threshold = 0.2 # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):
-            color = get_color(combined_map[x][y], threshold)  
+            if river_map[x][y]:
+                color = (0, 0, 255)  # Blue color for rivers
+            else:
+                color = get_color(combined_map[x][y], threshold)
             terrain_map[x][y] = color  
 
     # Convert terrain map to Pygame surface
