@@ -47,18 +47,34 @@ def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
     return noise_map
 
 def generate_radial_gradient(width, height):
-    center_x, center_y = width // 2, height // 2
-    max_distance = np.sqrt(center_x**2 + center_y**2)
-    gradient = np.zeros((width, height))  
-    for x in range(width):
-        for y in range(height):
-            distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-            gradient[x][y] = distance / max_distance  
-    # Invert the gradient
-    gradient = 1 - gradient
-    # Apply a tanh function to make the falloff steeper
-    gradient = np.tanh(gradient * .00001)  # Adjust the multiplier to control steepness
+    # Create 1D arrays using linspace
+    x = np.linspace(-1, 1, width)
+    y = np.linspace(-1, 1, height)
+    
+    # Create 2D grid using meshgrid
+    X, Y = np.meshgrid(x, y, indexing='ij')  # Ensure correct shape with indexing='ij'
+    
+    # Compute the normalized distance from the center
+    R = np.sqrt(X**2 + Y**2)
+    
+    # Normalize distances so that the maximum distance is 1
+    R = R / np.max(R)
+    
+    # Define the gradient function with a plateau and sharp falloff
+    plateau_radius = 0.1
+    falloff_radius = 1.0
+    gradient = gradient_function(R, plateau_radius, falloff_radius)
+    
     return gradient
+
+def gradient_function(r, plateau_radius=0.3, falloff_radius=0.7):
+    return np.piecewise(r,
+                        [r <= plateau_radius,
+                         (r > plateau_radius) & (r <= falloff_radius),
+                         r > falloff_radius],
+                        [1,
+                         lambda r: 0.5 * (1 + np.cos(np.pi * (r - plateau_radius) / (falloff_radius - plateau_radius))),
+                         0])
 
 def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed):
     noise_map = generate_noise(width, height, noise_scale, 4, 0.5, 2.0, noise_seed)
