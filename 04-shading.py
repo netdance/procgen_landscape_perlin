@@ -62,7 +62,7 @@ def generate_radial_gradient(width, height):
     
     # Define the gradient function with a plateau and sharp falloff
     plateau_radius = 0.1
-    falloff_radius = 1.0
+    falloff_radius = 0.9
     gradient = gradient_function(R, plateau_radius, falloff_radius)
     
     return gradient

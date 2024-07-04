@@ -31,7 +31,7 @@ def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
     noise_map = np.zeros((width, height)) 
     for x in range(width):
         for y in range(height):
-            noise_value = noise.snoise2(
+            noise_value = noise.pnoise2(
                 x / scale,
                 y / scale,
                 octaves=octaves,

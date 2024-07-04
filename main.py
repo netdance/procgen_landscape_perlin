@@ -10,7 +10,7 @@ import pygame
 
 # Basic configuration for logging
 logging.basicConfig(
-    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 # Creating a logger
@@ -28,11 +28,11 @@ def init():
     pygame.display.set_caption("2D Perlin Noise Terrain")
     return window
 
-def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed):
+def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed):
     noise_map = np.zeros((width, height))  
     for x in range(width):
         for y in range(height):
-            noise_value = noise.pnoise2(
+            noise_value = noise.snoise2(
                 x / scale,
                 y / scale,
                 octaves=octaves,
@@ -47,21 +47,37 @@ def generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity
     return noise_map
 
 def generate_radial_gradient(width, height):
-    center_x, center_y = width // 2, height // 2
-    max_distance = np.sqrt(center_x**2 + center_y**2)
-    gradient = np.zeros((width, height))  
-    for x in range(width):
-        for y in range(height):
-            distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-            gradient[x][y] = distance / max_distance  
-    # Invert the gradient
-    gradient = 1 - gradient
-    # Apply a tanh function to make the falloff steeper
-    gradient = np.tanh(gradient * .00001)  # Adjust the multiplier to control steepness
+    # Create 1D arrays using linspace
+    x = np.linspace(-1, 1, width)
+    y = np.linspace(-1, 1, height)
+    
+    # Create 2D grid using meshgrid
+    X, Y = np.meshgrid(x, y, indexing='ij')  # Ensure correct shape with indexing='ij'
+    
+    # Compute the normalized distance from the center
+    R = np.sqrt(X**2 + Y**2)
+    
+    # Normalize distances so that the maximum distance is 1
+    R = R / np.max(R)
+    
+    # Define the gradient function with a plateau and sharp falloff
+    plateau_radius = 0.1
+    falloff_radius = 1.0
+    gradient = gradient_function(R, plateau_radius, falloff_radius)
+    
     return gradient
 
+def gradient_function(r, plateau_radius=0.3, falloff_radius=0.7):
+    return np.piecewise(r,
+                        [r <= plateau_radius,
+                         (r > plateau_radius) & (r <= falloff_radius),
+                         r > falloff_radius],
+                        [1,
+                         lambda r: 0.5 * (1 + np.cos(np.pi * (r - plateau_radius) / (falloff_radius - plateau_radius))),
+                         0])
+
 def generate_combined_gradient(width, height, gradient, noise_scale, noise_seed):
-    noise_map = generate_perlin_noise(width, height, noise_scale, 4, 0.5, 2.0, noise_seed)
+    noise_map = generate_noise(width, height, noise_scale, 4, 0.5, 2.0, noise_seed)
     combined_gradient = gradient * noise_map
     # Normalize the combined gradient
     combined_gradient = (combined_gradient - combined_gradient.min()) / (combined_gradient.max() - combined_gradient.min())
@@ -104,14 +120,14 @@ def get_color(value, threshold=0.15):
 
 def create_map(width, height):
     # Parameters for Perlin noise
-    scale = 150.0         # Larger scale for more contiguous areas
+    scale = 200.0         # Larger scale for more contiguous areas
     octaves = 4          # Fewer octaves for less detail
     persistence = 0.5     # Adjust persistence
     lacunarity = 1.9      # Adjust lacunarity
     seed = np.random.randint(0, 100)
 
     # Generate noise map
-    noise_map = generate_perlin_noise(width, height, scale, octaves, persistence, lacunarity, seed)
+    noise_map = generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
 
     # Generate radial gradient
     gradient = generate_radial_gradient(width, height)
@@ -125,7 +141,7 @@ def create_map(width, height):
     combined_map = noise_map * combined_gradient
 
     # Create terrain map
-    threshold = 0.25 # Adjust this value to control the land-water ratio
+    threshold = 0.2 # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):
