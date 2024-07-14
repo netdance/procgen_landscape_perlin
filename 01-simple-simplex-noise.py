@@ -1,68 +1,30 @@
-import cProfile
-import logging
-import pstats
-import sys
-
 import noise
 import numpy as np
 import pygame
-
-# Basic configuration for logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-
-# Creating a logger
-logger = logging.getLogger(__name__)
+from colors import BLACK, GREEN, WHITE, SAND, BLUE, BROWN
 
 WIDTH, HEIGHT = 800, 600
-
-PROFILE = False
 
 def init():
     # Initialize Pygame
     pygame.init()
     # Set up display
     window = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("2D Perlin Noise Terrain")
+    pygame.display.set_caption("2D Noise Terrain")
     return window
 
-def generate_noise(width, height, scale, octaves, persistence, lacunarity, seed):
-    noise_map = np.zeros((width, height)) 
+def generate_noise(width, height, scale, octaves, seed):
+    noise_map = np.zeros((width, height))  # Note (width, height)
     for x in range(width):
         for y in range(height):
             noise_value = noise.snoise2(
-                x / scale,
-                y / scale,
-                octaves=octaves,
-                persistence=persistence,
-                lacunarity=lacunarity,
-                repeatx=1024,
-                repeaty=1024,
-                base=seed
+                x / scale, y / scale, octaves=octaves, base=seed
             )
-            noise_map[x][y] = noise_value  
+            # Normalize noise_value from [-1, 1] to [0, 1]
+            noise_map[x][y] = (noise_value + 1) / 2  # Note (x, y) indexing
     return noise_map
 
-def generate_radial_gradient(width, height):
-    center_x, center_y = width // 2, height // 2
-    max_distance = np.sqrt(center_x**2 + center_y**2)
-    gradient = np.zeros((width, height))  # Note (width, height)
-    for x in range(width):
-        for y in range(height):
-            distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-            gradient[x][y] = distance / max_distance  # Note (x, y) indexing
-            logger.debug("x %s y %s gradient %s", x, y, gradient[x][y])
-    return gradient
-
 def get_color(value, threshold=0.15):
-    # Define colors
-    BLACK = (0, 0, 0)
-    GREEN = (34, 139, 34)
-    SAND = (231,196,150)
-    BROWN = (139,69,19)
-    BLUE = (0, 0, 255)
-    WHITE = (255, 255, 255)
     if value < threshold - 0.05:
         return BLUE  # Deep Water
     elif value < threshold:
@@ -77,16 +39,14 @@ def get_color(value, threshold=0.15):
 def create_map(width, height):
     # Parameters for Perlin noise
     scale = 200.0         # Larger scale for more contiguous areas
-    octaves = 4          # Fewer octaves for less detail
-    persistence = 0.75     # Adjust persistence
-    lacunarity = 1.9      # Adjust lacunarity
+    octaves = 4           # Fewer octaves for less detail
     seed = np.random.randint(0, 100)
 
     # Generate noise map
-    noise_map = generate_noise(width, height, scale, octaves, persistence, lacunarity, seed)
+    noise_map = generate_noise(width, height, scale, octaves, seed)
 
     # Create terrain map
-    threshold = 0.0  # Adjust this value to control the land-water ratio
+    threshold = 0.45  # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
     for x in range(width):
         for y in range(height):
@@ -107,32 +67,13 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             if event.type == pygame.KEYDOWN: 
-                logger.debug("keydown")
                 if event.key == pygame.K_q:
-                    logger.debug("keydown q")
                     running = False
                 if event.key == pygame.K_r:
-                    logger.debug("keydown r")
                     surface = create_map(WIDTH, HEIGHT)
 
         window.blit(surface, (0, 0))
         pygame.display.flip()
 
-    if not PROFILE:
-        pygame.quit()
-        sys.exit()
-
 if __name__ == "__main__":
-
-    if PROFILE:
-        profiler = cProfile.Profile()
-        profiler.enable()
-        main()
-        profiler.disable()
-
-        stats = pstats.Stats(profiler)
-        stats.strip_dirs()
-        stats.sort_stats('cumulative')
-        stats.print_stats()
-    else:
-        main()
+    main()
