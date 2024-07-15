@@ -6,9 +6,7 @@ from colors import BLACK, GREEN, WHITE, SAND, BLUE, BROWN
 WIDTH, HEIGHT = 800, 600
 
 def init():
-    # Initialize Pygame
     pygame.init()
-    # Set up display
     window = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.display.set_caption("2D Noise Terrain")
     return window
@@ -41,10 +39,8 @@ def create_map(width, height):
     scale = 200.0         # Larger scale for more contiguous areas
     octaves = 4           # Fewer octaves for less detail
     seed = np.random.randint(0, 100)
-
     # Generate noise map
     noise_map = generate_noise(width, height, scale, octaves, seed)
-
     # Create terrain map
     threshold = 0.45  # Adjust this value to control the land-water ratio
     terrain_map = np.zeros((width, height, 3), dtype=np.uint8)  
@@ -52,7 +48,6 @@ def create_map(width, height):
         for y in range(height):
             color = get_color(noise_map[x][y], threshold)  
             terrain_map[x][y] = color  
-
     # Convert terrain map to Pygame surface
     surface = pygame.surfarray.make_surface(terrain_map)
     return surface
@@ -60,7 +55,6 @@ def create_map(width, height):
 def main():
     window = init()
     surface = create_map(WIDTH, HEIGHT)
-
     running = True
     while running:
         for event in pygame.event.get():
